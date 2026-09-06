@@ -1,5 +1,7 @@
 # keyforge-client — Architecture & Planning Document
 
+> **Fork addendum (keyforge-anvil-client).** *This repo is now the client for **keyforge-anvil**, a separate server deployment whose entitlement token replaced the single `productId` claim with `featureIds: string[]` (`keyforge-anvil/ARCHITECTURE.md` §5). The JWS format, EdDSA signing, key format, token error types and clock-rollback check are all unchanged. `getEntitlement()` now also returns `featureIds`. See `PROGRESS.md`'s "Fork" section for what changed. Everything below this line predates the fork and still says "keyforge-client" / "Keyforge"; it is kept as the original planning record, not rewritten.*
+
 Status: **Proposal — pending your approval before implementation begins**
 Companion project to Keyforge (the licensing server). This doc assumes familiarity with Keyforge's own `ARCHITECTURE.md` and doesn't re-derive decisions already made there — it references them directly.
 

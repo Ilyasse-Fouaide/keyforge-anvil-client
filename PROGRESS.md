@@ -2,7 +2,86 @@
 
 Running status log. See `ARCHITECTURE.md` for design decisions and the phase plan (§13).
 
-**Current state: Phase 4 complete. All four phases done.**
+**Current state: all four `ARCHITECTURE.md` §13 phases done, plus the `examples/`
+suite and npm publishing (see the sections below). The repo was then forked from
+`keyforge-client` to `keyforge-anvil-client` — see the fork section immediately
+below.**
+
+---
+
+## Fork → keyforge-anvil-client (`featureIds` token contract) ✅
+
+Forked from `keyforge-client` (kept as the `upstream` remote; `origin` is now
+`keyforge-anvil-client`) to be the client for **keyforge-anvil**, a separate
+licensing-server deployment. keyforge-anvil collapsed the old Product + Plan model
+into a flat `Feature` catalog, and its signed entitlement token replaced the
+single `productId` claim with **`featureIds: string[]`** — a non-empty array of
+Feature-id strings (`keyforge-anvil/src/crypto/entitlementToken.schema.js`,
+`keyforge-anvil/ARCHITECTURE.md` §5). Everything else about the token is
+unchanged: compact JWS, `alg: 'EdDSA'`, `kid = String(keyVersion)` header, SPKI
+public keys, the three token error types, the clock-rollback check. The client's
+network layer already matched keyforge-anvil's `/api/v1/licenses/*` endpoints
+exactly (verified against its route/controller/schema source), so no
+`activate.js`/`refresh.js`/`deactivate.js`/`network/` changes were needed.
+
+### What changed
+
+| Area | Change |
+|---|---|
+| `src/entitlement.js` | `getEntitlement()`'s `valid` status now also returns `featureIds` (`{ status, expiresAt, featureIds, features }`), relayed verbatim from the verified payload — exactly like `features`, with no `Array.isArray`/schema guard. |
+| `src/crypto/verify.js` | Doc comment only: `featureIds` named alongside `features` as opaque passthrough. `assertValidPayloadShape` still checks `expiresAt` only. |
+| `tests/` | `buildEntitlementPayload()` helper's `productId: 'prod_test'` → `featureIds: ['feature_menu', 'feature_orders']`; `valid`-shape assertions in `getEntitlement.test.js` / `index.test.js` gained `featureIds`; `verify.test.js` asserts `featureIds` is relayed and `productId` is absent; new "featureIds surfacing" block in `getEntitlement.test.js`. 118 → 120 tests. |
+| Identity | `package.json` `name` → `keyforge-anvil-client`, `version` `0.1.0` → `0.2.0`, description / repo URLs / keywords; `README.md` title, install line, import specifiers, prose, and the `valid` status-table row; `CLAUDE.md` prose + sibling path. The exported factory stays **`createKeyforgeClient`** (not renamed — no API churn). The default storage dir stays `.keyforge-client/` (internal detail, not branding; renaming it would break existing installs). |
+| `examples/` | Reworked for keyforge-anvil's admin API: `createProduct`/`createPlan` → `createFeature` (`POST /api/v1/admin/features`); `createSubscription` now sends `{ features: [id], gracePeriodDays, ... }` (no `productId`/`planId`; there is no `/plans` endpoint); list helpers page with `?limit=100` (the API max) and filter client-side; `sweepFixtures()` cascade is License → Subscription → Customer → Feature. Fixture prefix `KFC Example` → `KAC Example`. `fixtures.json` drops `productId`/`planId`, gains `featureId`/`featureIds`. Scenario 01 asserts `getEntitlement().featureIds` includes the licensed feature. Scenario 03 waits past the stored `highestIssuedAtSeen` second before `refresh()` (see below). All 6 scenario imports → `keyforge-anvil-client`. `examples/README.md` + `.env.example` rewritten for keyforge-anvil (server name, `npm run dev` / port 3000, Feature chain, `featureIds` in sample output). |
+
+### Decisions
+
+| Decision | Rationale |
+|---|---|
+| **Surface `featureIds` on `getEntitlement()` only**, not on `activate()`/`refresh()` return values | User-approved. `getEntitlement()` is the network-free path a branch app gates features on; the write paths' contracts (`{ expiresAt }` / `{ status, expiresAt }`) stay minimal. |
+| **Relay `featureIds` verbatim, no validation** | The repo's settled "only validate what our own logic branches on" stance (Phase 2): signature verification proves the server produced the shape; `featureIds` is never branched on locally, only relayed — identical treatment to `features`. |
+| **Keep `createKeyforgeClient` / `KeyforgeApiError` / `.keyforge-client/` names** | User-approved. The rebrand is the package identity; renaming the exported API or the on-disk storage dir would be breaking changes beyond the cosmetic scope, for no benefit. |
+| **`examples/` list helpers filter client-side instead of using the admin API's `filters=` query param** | The advanced-filter field ids are coupled to each resource's `*_FILTER_FIELDS` config (which already broke this tooling once upstream). For a bounded dev database, pulling a `?limit=100` page and filtering the returned docs is more robust. |
+| **Scenario 03 waits until wall-clock second > stored `highestIssuedAtSeen` before `refresh()`** | Entitlement-token `issuedAt` has 1-second resolution and `src/refresh.js`'s replay guard requires a *strictly* newer token. A real background refresh runs minutes/hours post-activation, but `run-all.js` can drive 01 → 03 within one second, making the server mint a same-`issuedAt` token that the guard correctly rejects as a replay. The wait reflects the real cadence; it is not a library change. |
+| **`ARCHITECTURE.md`: title addendum only** | Repo rule requires explicit approval for `ARCHITECTURE.md` edits; the approved plan authorized exactly a short "Fork addendum" block under the title. The body predates the fork and is kept as the original planning record. |
+
+### Not changed / non-issues found
+
+- **No `productId` anywhere in `src/`** — the verification path only ever read
+  `expiresAt` (+ `keyVersion` cross-check); the old `productId` claim was never
+  consumed by this client, so the contract change is purely additive.
+- **No intermediate "single product" representation** to convert to a list —
+  token-payload fields are relayed verbatim; `featureIds` is a list only at the
+  one point it lands in the status object.
+- **keyforge-anvil's `docs/client-sdk-integration.md` is stale** — its "The
+  entitlement token" section still shows `productId`. Not this repo's file;
+  flagged in `CLAUDE.md`. `entitlementToken.schema.js` + `ARCHITECTURE.md` §5 are
+  authoritative.
+
+### Verified end-to-end
+
+- `npm run lint` clean; `npm test` — **120 passing** across 10 files (was 118).
+  `npm run format:check` flags CRLF on this Windows checkout (`core.autocrlf=true`,
+  no `.gitattributes`) — pre-existing and unrelated; `prettier --end-of-line auto`
+  on all `src/`/`tests/`/`examples/` JS is clean, and committed files are LF.
+- **Live, against a real running keyforge-anvil server** (`npm run dev`, port
+  3000, local MongoDB — not mocked): `npm run examples:run-all` — setup + all six
+  scenarios + teardown **PASS**, run twice back-to-back to confirm
+  re-runnability. Scenario 01's output shows a real EdDSA token carrying
+  `"featureIds":["<id>"]` and the new assertion passing; scenario 03 shows the
+  token rotating and watermarks advancing; 04 → `revoked`; 06 → `tampered`.
+  (Repeated rapid re-runs can trip keyforge-anvil's in-memory admin-login rate
+  limiter — 10/15 min/IP; restarting the server resets it. Same gotcha noted in
+  keyforge-anvil's own `VERIFICATION.md`.)
+
+### Carry-forward
+
+- The narrow `refresh()`-within-the-same-second-as-`activate()` →
+  `STALE_TOKEN_REPLAY` interaction (scenario 03's wait works around it) is a
+  real, pre-existing property of `src/refresh.js`'s strictly-greater replay
+  guard, not a regression. If a real integrator hits it, the fix is a design
+  discussion about that guard (e.g. tolerate `issuedAt` equal to the watermark
+  when the stored token differs), not a quiet loosening.
 
 ---
 

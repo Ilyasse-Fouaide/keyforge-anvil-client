@@ -27,6 +27,10 @@ describe('verifyEntitlementToken', () => {
 
     expect(payload).toMatchObject(claims);
     expect(typeof payload.keyVersion).toBe('number');
+    // keyforge-anvil replaced the single productId claim with a featureIds
+    // array — verify relays it verbatim (no schema check on this end).
+    expect(payload.featureIds).toEqual(claims.featureIds);
+    expect(payload).not.toHaveProperty('productId');
   });
 
   it('rejects a tampered payload with TokenInvalidError', async () => {

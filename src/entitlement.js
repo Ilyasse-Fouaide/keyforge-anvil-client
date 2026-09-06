@@ -119,7 +119,12 @@ export async function createEntitlementChecker({ storage, publicKeys, getNow = d
         await storage.set('highestIssuedAtSeen', String(payload.issuedAt));
       }
 
-      return { status: 'valid', expiresAt: payload.expiresAt, features: payload.features };
+      return {
+        status: 'valid',
+        expiresAt: payload.expiresAt,
+        featureIds: payload.featureIds,
+        features: payload.features,
+      };
     } catch (err) {
       if (err instanceof TokenExpiredError) return { status: 'expired' };
       if (err instanceof UnknownKeyVersionError) return { status: 'unknown_key_version' };

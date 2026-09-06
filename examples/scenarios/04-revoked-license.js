@@ -3,7 +3,7 @@
 // admin API mid-scenario, then refresh(), then getEntitlement() reporting
 // 'revoked'. Requires 01-first-activation.js to have run first.
 
-import { createKeyforgeClient } from 'keyforge-client';
+import { createKeyforgeClient } from 'keyforge-anvil-client';
 
 import { createAdminSession, setLicenseStatus } from '../lib/adminApiClient.js';
 import { loadConfig } from '../lib/env.js';

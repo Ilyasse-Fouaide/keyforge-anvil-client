@@ -1,9 +1,9 @@
-# keyforge-client
+# keyforge-anvil-client
 
-Offline-safe license client for Keyforge-protected branch installations.
+Offline-safe license client for keyforge-anvil-protected branch installations.
 
-`keyforge-client` is a Node/ESM module that runs *inside* a branch's local
-backend process to talk to Keyforge (the licensing server, a separate
+`keyforge-anvil-client` is a Node/ESM module that runs *inside* a branch's local
+backend process to talk to keyforge-anvil (the licensing server, a separate
 repo). It is not a browser client — no UI, no framework dependency. Local
 Ed25519 signature verification is the fast, network-free path;
 server contact (`activate`/`refresh`/`deactivate`) is one-time or
@@ -13,13 +13,13 @@ background. **The branch app must never block startup on a network call** —
 ## Installation
 
 ```bash
-npm install keyforge-client
+npm install keyforge-anvil-client
 ```
 
 ## Quick start
 
 ```js
-import { createKeyforgeClient } from 'keyforge-client';
+import { createKeyforgeClient } from 'keyforge-anvil-client';
 
 const client = await createKeyforgeClient({
   publicKeys: { 1: process.env.KEYFORGE_PUBLIC_KEY_V1 },
@@ -49,9 +49,9 @@ await client.deactivate();
 
 | Field | Required | Default | Notes |
 |---|---|---|---|
-| `publicKeys` | Yes | — | `{ [keyVersion]: pemString }`. Keyforge's Ed25519 public key(s), keyed by `keyVersion` for rotation. Config, not hardcoded, so a server-side key rotation doesn't force a new release of this module. |
-| `baseUrl` | Yes | — | Keyforge server base URL, e.g. `https://licensing.example.com`. |
-| `storage` | No | a JSON-file adapter at `<cwd>/.keyforge-client/state.json` | Any object implementing the `StorageAdapter` interface (`get`/`set`/`delete`, all `Promise`-returning). The default is a plain JSON file — no SQLite, no native-binary install friction. If your backend already manages its own database, implement `StorageAdapter` against it instead; pass an explicit instance (e.g. `import { createJsonFileAdapter } from 'keyforge-client'; createJsonFileAdapter({ filePath })`) to change the default file's location. |
+| `publicKeys` | Yes | — | `{ [keyVersion]: pemString }`. keyforge-anvil's Ed25519 public key(s), keyed by `keyVersion` for rotation. Config, not hardcoded, so a server-side key rotation doesn't force a new release of this module. |
+| `baseUrl` | Yes | — | keyforge-anvil server base URL, e.g. `https://licensing.example.com`. |
+| `storage` | No | a JSON-file adapter at `<cwd>/.keyforge-client/state.json` | Any object implementing the `StorageAdapter` interface (`get`/`set`/`delete`, all `Promise`-returning). The default is a plain JSON file — no SQLite, no native-binary install friction. If your backend already manages its own database, implement `StorageAdapter` against it instead; pass an explicit instance (e.g. `import { createJsonFileAdapter } from 'keyforge-anvil-client'; createJsonFileAdapter({ filePath })`) to change the default file's location. |
 | `getNow` | No | real clock (unix seconds) | Injectable clock seam, mainly useful for tests. |
 | `fetchImpl` | No | global `fetch` | Injectable fetch seam, mainly useful for tests. |
 
@@ -83,7 +83,7 @@ error (e.g. corrupted state file) propagates instead of becoming a status.
 | Status | Meaning |
 |---|---|
 | `not_activated` | No stored entitlement token — `activate()` hasn't run yet, or `deactivate()` cleared it. |
-| `valid` | Signature, expiry, clock, and replay checks all pass. Returns `{ status, expiresAt, features }`. |
+| `valid` | Signature, expiry, clock, and replay checks all pass. Returns `{ status, expiresAt, featureIds, features }` — `featureIds` is the token's array of licensed feature ids (keyforge-anvil's replacement for the old single `productId` claim); `features` is the open-ended capability map (currently `{ maxBranches }`). |
 | `expired` | Token's signature is valid but it's past `expiresAt`. |
 | `revoked` | The server reported a revocation on a past `refresh()` call — see [Revocation propagation](#revocation-propagation) below. |
 | `tampered` | Signature invalid, payload malformed, `installationId` doesn't match this installation, or the token is a replay of an already-superseded one. |
@@ -97,8 +97,8 @@ outcomes (never for `refresh()`'s expected "offline"/"rate limited" cases,
 which resolve to `{ status: 'offline' }` instead of throwing).
 
 **Client-side-detected** — these are synthetic codes this library produces
-locally; they are never returned by the Keyforge server, so you won't find
-them in Keyforge's own API docs:
+locally; they are never returned by the keyforge-anvil server, so you won't find
+them in keyforge-anvil's own API docs:
 
 | Code | Meaning |
 |---|---|
@@ -107,10 +107,10 @@ them in Keyforge's own API docs:
 | `STALE_TOKEN_REPLAY` | A response's token is not newer than the last one this installation accepted — rejects replayed/captured old responses. |
 
 **Server-reported** — `error.code` is passed through verbatim from
-Keyforge's own error vocabulary (this library never invents a parallel
+keyforge-anvil's own error vocabulary (this library never invents a parallel
 vocabulary for these). A representative, non-exhaustive sample seen in this
 codebase's tests: `LICENSE_INVALID`, `LICENSE_REVOKED`, `RATE_LIMITED`,
-`INSTALLATION_TOKEN_INVALID`. Keyforge's own docs are the authoritative,
+`INSTALLATION_TOKEN_INVALID`. keyforge-anvil's own docs are the authoritative,
 complete list.
 
 One related detail: the same underlying "token failed local verification"
@@ -128,7 +128,7 @@ and never throws for expected bad states), not an inconsistency.
 `getEntitlement()` runs entirely offline. Run purely offline, it cannot
 know about a revocation that happened after the last successful
 `refresh()` — the server can't tell a client something it hasn't
-contacted. This is inherited by design from Keyforge server's own
+contacted. This is inherited by design from the keyforge-anvil server's own
 architecture (revocation propagates only when a client reaches the
 server, bounded by the entitlement token's expiry window); it is not a
 defect in this client. Call `refresh()` periodically in the background to

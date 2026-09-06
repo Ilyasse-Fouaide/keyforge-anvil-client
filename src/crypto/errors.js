@@ -1,7 +1,8 @@
-// Phase 2 — ported from Keyforge server's src/crypto/errors.js, unchanged.
+// Phase 2 — ported from the keyforge server's src/crypto/errors.js, unchanged
+// (keyforge-anvil's equivalent is identical).
 //
 // Deliberately does NOT extend a shared app-wide error base: this stays
-// framework-agnostic, and translating these into keyforge-client's own
+// framework-agnostic, and translating these into keyforge-anvil-client's own
 // status-object vocabulary is entitlement.js's job, not this file's.
 //
 // "Malformed" and "tampered" both collapse into TokenInvalidError rather

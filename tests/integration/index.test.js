@@ -85,6 +85,7 @@ describe('createKeyforgeClient() (end-to-end)', () => {
     await expect(client.getEntitlement()).resolves.toEqual({
       status: 'valid',
       expiresAt: claims1.expiresAt,
+      featureIds: claims1.featureIds,
       features: claims1.features,
     });
 
@@ -104,6 +105,7 @@ describe('createKeyforgeClient() (end-to-end)', () => {
     await expect(client.getEntitlement()).resolves.toEqual({
       status: 'valid',
       expiresAt: claims2.expiresAt,
+      featureIds: claims2.featureIds,
       features: claims2.features,
     });
 

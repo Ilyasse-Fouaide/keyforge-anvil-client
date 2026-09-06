@@ -9,7 +9,7 @@
 // its own separate `node` command (by a human, or by run-all.js spawning it
 // as a child process) — never imported and called in-process alongside 01.
 
-import { createKeyforgeClient } from 'keyforge-client';
+import { createKeyforgeClient } from 'keyforge-anvil-client';
 
 import { createJsonFileAdapter } from '../../src/storage/json-file.js';
 import { statePath } from '../lib/paths.js';
