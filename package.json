@@ -1,6 +1,6 @@
 {
   "name": "keyforge-anvil-client",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "description": "Offline-safe license client for keyforge-anvil-protected branch installations",
   "type": "module",
   "license": "MIT",
