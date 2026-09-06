@@ -102,8 +102,10 @@ export async function verifyEntitlementToken(
  * as the clock-rollback bug this module's clock/ guards against.
  * `keyVersion` needs no separate check — the cross-check above already
  * rejects a missing/undefined value, since `String(undefined)` can't match
- * a real `kid`. `features` is passed through opaquely and unvalidated: it's
- * never compared or branched on here, only relayed to the caller.
+ * a real `kid`. `featureIds` (keyforge-anvil's replacement for the old
+ * single `productId` claim) and `features` are both passed through opaquely
+ * and unvalidated: neither is compared or branched on here, only relayed to
+ * the caller (`entitlement.js` surfaces both on a `valid` status).
  */
 function assertValidPayloadShape(payload) {
   if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {

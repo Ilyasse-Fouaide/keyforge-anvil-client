@@ -10,7 +10,7 @@
 // scenario un-revokes via the admin API before reactivating, modeling a
 // realistic sequence too (admin restores a license, branch reactivates).
 
-import { createKeyforgeClient } from 'keyforge-client';
+import { createKeyforgeClient } from 'keyforge-anvil-client';
 
 import { createAdminSession, setLicenseStatus } from '../lib/adminApiClient.js';
 import { loadConfig } from '../lib/env.js';

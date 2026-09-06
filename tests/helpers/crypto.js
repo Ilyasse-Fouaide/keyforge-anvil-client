@@ -25,7 +25,7 @@ export function buildEntitlementPayload(overrides = {}) {
   return {
     licenseId: 'lic_test',
     installationId: 'inst_test',
-    productId: 'prod_test',
+    featureIds: ['feature_menu', 'feature_orders'],
     status: 'active',
     features: { maxBranches: 3 },
     issuedAt: now,

@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Phase 1 (storage adapter interface + default JSON-file implementation) is complete — see `PROGRESS.md` for what shipped and the decisions made along the way; check it first, since it supersedes this section as later phases land. Work proceeds phase by phase per `ARCHITECTURE.md` §13 — don't jump ahead to a later phase's scope.
+All four `ARCHITECTURE.md` §13 phases shipped, plus the `examples/` suite and npm
+publishing. The repo was then **forked from `keyforge-client` to
+`keyforge-anvil-client`** — the client for **keyforge-anvil**, a separate server
+deployment whose entitlement token replaced the single `productId` claim with
+`featureIds: string[]`. See `PROGRESS.md` (check it first — it supersedes this
+section): its top "Fork" section is the authoritative record of what changed.
 
 ## Commands
 
@@ -16,20 +21,15 @@ Phase 1 (storage adapter interface + default JSON-file implementation) is comple
 
 ## What this project is
 
-`keyforge-client` is a Node module (JavaScript, ESM, no TypeScript) that will run *inside a branch's local backend process* to talk to Keyforge (the licensing server, a separate sibling repo). It is not a browser client — no UI, no framework dependency. It manages offline-safe license verification for one branch installation: local Ed25519 signature verification is the fast path, server contact (`activate`/`refresh`/`deactivate`) is one-time or background, and **the branch app must never block startup on a network call**.
+`keyforge-anvil-client` is a Node module (JavaScript, ESM, no TypeScript) that runs *inside a branch's local backend process* to talk to keyforge-anvil (the licensing server, a separate sibling repo). It is not a browser client — no UI, no framework dependency. It manages offline-safe license verification for one branch installation: local Ed25519 signature verification is the fast path, server contact (`activate`/`refresh`/`deactivate`) is one-time or background, and **the branch app must never block startup on a network call**.
 
 Planned public API (ARCHITECTURE.md §4): `activate(licenseKey)`, `getEntitlement()` (network-free, returns a status object, never throws for expected bad states), `refresh()` (silently no-ops when offline), `deactivate()`.
 
-## Relationship to Keyforge (the server repo)
+## Relationship to keyforge-anvil (the server repo)
 
-- Sibling repo, confirmed local path: `/c/Users/ifouaide/Documents/Keyforge`. It is a separate, already-complete (all 8 phases closed) project — this client is deliberately a new repo, not a package inside it.
-- Phase 2 of this project (local verification) is a **port, not a reimplementation**, of three specific files from that repo:
-  - `src/crypto/verify.js` (`verifyEntitlementToken`)
-  - `tests/helpers/offlineClock.js` (`assertNoClockRollback` — including its fail-closed behavior on malformed input, a bug Keyforge's own Phase 7 review caught)
-  - `tests/offline-flow/clientVerification.test.js` (`verifyStoredToken` — clock check before signature verification)
-  
-  Read these files line-by-line from the real repo before writing this module's equivalents; don't reconstruct their behavior from `ARCHITECTURE.md`'s prose summary or from memory. This is exactly the kind of read-heavy, reference-checking work worth delegating to a subagent so porting details don't have to stay loaded in the main session throughout.
-- Keyforge's own `CLAUDE.md`/`ARCHITECTURE.md`/`docs/client-sdk-integration.md` document the server-side contract (`/activate`, `/validate`, `/refresh`, `/deactivate`, error vocabulary in `src/crypto/errors.js`) this module is a client for. Don't invent a parallel status/error vocabulary that means the same thing with different names — map onto Keyforge's existing one (ARCHITECTURE.md §9).
+- Sibling repo, confirmed local path: `/c/Users/ifouaide/Documents/keyforge-anvil` (the `keyforge-anvil` deployment; the original `keyforge` server lives at `/c/Users/ifouaide/Documents/Keyforge` and remains this repo's `upstream`). keyforge-anvil is a separate, complete project — this client is deliberately its own repo, not a package inside it.
+- The Phase 2 local-verification code (`src/crypto/verify.js`, `src/clock/rollback.js`) was originally a **port, not a reimplementation**, of the original keyforge server's `src/crypto/verify.js`, `tests/helpers/offlineClock.js` and `tests/offline-flow/clientVerification.test.js`. keyforge-anvil's own equivalents are unchanged except the token payload (`productId` → `featureIds: string[]`); re-check the real files line-by-line before touching this boundary rather than working from prose or memory.
+- keyforge-anvil's `CLAUDE.md`/`ARCHITECTURE.md`/`docs/client-sdk-integration.md` document the server-side contract (`/activate`, `/validate`, `/refresh`, `/deactivate`, error vocabulary) this module is a client for. **Its `docs/client-sdk-integration.md` §"The entitlement token" is stale — it still shows `productId`; `src/crypto/entitlementToken.schema.js` + `ARCHITECTURE.md` §5 are authoritative.** Don't invent a parallel status/error vocabulary — map onto keyforge-anvil's existing one (ARCHITECTURE.md §9).
 
 ## Planned architecture (ARCHITECTURE.md §2, §5, §11)
 

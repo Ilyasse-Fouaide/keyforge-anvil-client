@@ -1,17 +1,17 @@
 {
-  "name": "keyforge-client",
-  "version": "0.1.0",
-  "description": "Offline-safe license client for Keyforge-protected branch installations",
+  "name": "keyforge-anvil-client",
+  "version": "0.2.0",
+  "description": "Offline-safe license client for keyforge-anvil-protected branch installations",
   "type": "module",
   "license": "MIT",
   "author": "ilyasse-fouaide <ilyasse.fouaide@gmail.com>",
-  "homepage": "https://github.com/Ilyasse-Fouaide/keyforge-client#readme",
+  "homepage": "https://github.com/Ilyasse-Fouaide/keyforge-anvil-client#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Ilyasse-Fouaide/keyforge-client.git"
+    "url": "git+https://github.com/Ilyasse-Fouaide/keyforge-anvil-client.git"
   },
   "bugs": {
-    "url": "https://github.com/Ilyasse-Fouaide/keyforge-client/issues"
+    "url": "https://github.com/Ilyasse-Fouaide/keyforge-anvil-client/issues"
   },
   "keywords": [
     "license",
@@ -19,7 +19,8 @@
     "entitlement",
     "offline",
     "ed25519",
-    "keyforge"
+    "keyforge",
+    "keyforge-anvil"
   ],
   "main": "./src/index.js",
   "exports": "./src/index.js",

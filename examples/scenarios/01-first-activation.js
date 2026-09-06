@@ -4,11 +4,11 @@
 // examples/README.md): every later scenario builds on the on-disk state this
 // one creates at examples/.state/state.json.
 
-import { createKeyforgeClient } from 'keyforge-client';
+import { createKeyforgeClient } from 'keyforge-anvil-client';
 
-// Not exported from the package's public entry point — needed here only to
-// point the harness at examples/.state/state.json instead of the library's
-// own default `.keyforge-client/` path.
+// Imported by relative path (also re-exported from the package entry point) —
+// used here only to point the harness at examples/.state/state.json instead of
+// the library's own default `.keyforge-client/` path.
 import { createJsonFileAdapter } from '../../src/storage/json-file.js';
 import { statePath } from '../lib/paths.js';
 import { check, loadFixtures, loadPublicKeys, run } from '../lib/scenario.js';
@@ -35,5 +35,10 @@ run(async () => {
   check(
     entitlement.status === 'valid',
     `getEntitlement() reports 'valid' on a fresh activation (got '${entitlement.status}')`,
+  );
+  check(
+    Array.isArray(entitlement.featureIds) && entitlement.featureIds.includes(fixtures.featureId),
+    `getEntitlement() surfaces the licensed featureIds array including ${fixtures.featureId} ` +
+      `(got ${JSON.stringify(entitlement.featureIds)})`,
   );
 });

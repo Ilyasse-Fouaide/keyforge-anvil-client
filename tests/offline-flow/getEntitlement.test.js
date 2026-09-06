@@ -52,7 +52,37 @@ describe('getEntitlement (offline-flow composition)', () => {
     await expect(getEntitlement()).resolves.toEqual({
       status: 'valid',
       expiresAt: claims.expiresAt,
+      featureIds: claims.featureIds,
       features: claims.features,
+    });
+  });
+
+  describe('featureIds surfacing (keyforge-anvil token contract)', () => {
+    it('relays the verified token featureIds array verbatim onto the valid status', async () => {
+      const claims = buildEntitlementPayload({ featureIds: ['feat_a', 'feat_b', 'feat_c'] });
+      const jws = await signTestToken(claims, { privateKey: keyPair.privateKey, kid: '1' });
+      await storage.set('entitlementToken', jws);
+      await storage.set('lastValidatedAt', String(claims.issuedAt - 10));
+
+      const { getEntitlement } = await createChecker({ getNow: () => claims.issuedAt });
+
+      const result = await getEntitlement();
+      expect(result.status).toBe('valid');
+      expect(result.featureIds).toEqual(['feat_a', 'feat_b', 'feat_c']);
+    });
+
+    it('surfaces a different featureIds set for a different token (not hardcoded)', async () => {
+      const claims = buildEntitlementPayload({ featureIds: ['only_one_feature'] });
+      const jws = await signTestToken(claims, { privateKey: keyPair.privateKey, kid: '1' });
+      await storage.set('entitlementToken', jws);
+      await storage.set('lastValidatedAt', String(claims.issuedAt - 10));
+
+      const { getEntitlement } = await createChecker({ getNow: () => claims.issuedAt });
+
+      await expect(getEntitlement()).resolves.toMatchObject({
+        status: 'valid',
+        featureIds: ['only_one_feature'],
+      });
     });
   });
 
@@ -118,6 +148,7 @@ describe('getEntitlement (offline-flow composition)', () => {
     await expect(getEntitlement()).resolves.toEqual({
       status: 'valid',
       expiresAt: claims.expiresAt,
+      featureIds: claims.featureIds,
       features: claims.features,
     });
   });
@@ -184,6 +215,7 @@ describe('getEntitlement (offline-flow composition)', () => {
       await expect(getEntitlement()).resolves.toEqual({
         status: 'valid',
         expiresAt: oldClaims.expiresAt,
+        featureIds: oldClaims.featureIds,
         features: oldClaims.features,
       });
 
@@ -193,6 +225,7 @@ describe('getEntitlement (offline-flow composition)', () => {
       await expect(getEntitlement()).resolves.toEqual({
         status: 'valid',
         expiresAt: newClaims.expiresAt,
+        featureIds: newClaims.featureIds,
         features: newClaims.features,
       });
 
@@ -229,6 +262,7 @@ describe('getEntitlement (offline-flow composition)', () => {
       await expect(getEntitlement()).resolves.toEqual({
         status: 'valid',
         expiresAt: claims.expiresAt,
+        featureIds: claims.featureIds,
         features: claims.features,
       });
       await expect(storage.get('highestIssuedAtSeen')).resolves.toBe(String(claims.issuedAt));
@@ -358,6 +392,7 @@ describe('getEntitlement (offline-flow composition)', () => {
       await expect(getEntitlement()).resolves.toEqual({
         status: 'valid',
         expiresAt: claims.expiresAt,
+        featureIds: claims.featureIds,
         features: claims.features,
       });
     });

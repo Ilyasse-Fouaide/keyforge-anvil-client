@@ -4,7 +4,9 @@
 // lastValidatedAt) and entitlementToken actually advance. Requires
 // 01-first-activation.js (and 02, narratively) to have run first.
 
-import { createKeyforgeClient } from 'keyforge-client';
+import { setTimeout as sleep } from 'node:timers/promises';
+
+import { createKeyforgeClient } from 'keyforge-anvil-client';
 
 import { createJsonFileAdapter } from '../../src/storage/json-file.js';
 import { statePath } from '../lib/paths.js';
@@ -35,6 +37,18 @@ run(async () => {
 
   const before = await snapshot();
   console.log(`before refresh() -> ${JSON.stringify(before)}`);
+
+  // Entitlement-token `issuedAt` has one-second resolution, and the client's
+  // replay guard requires a refreshed token to be *strictly* newer than the
+  // last one seen (src/refresh.js). A real background refresh runs minutes or
+  // hours after activation, never the same second — but run-all.js can drive
+  // 01 -> 03 in well under a second, which would make the server mint a token
+  // with the same `issuedAt` and the guard reject it as a replay. Wait past
+  // the stored watermark's second so this scenario reflects the real cadence.
+  const watermarkSecond = Number(before.highestIssuedAtSeen);
+  while (Math.floor(Date.now() / 1000) <= watermarkSecond) {
+    await sleep(250);
+  }
 
   const refreshResult = await client.refresh();
   console.log(`refresh() -> ${JSON.stringify(refreshResult)}`);

@@ -10,7 +10,7 @@
 
 import { readFile, writeFile } from 'node:fs/promises';
 
-import { createKeyforgeClient } from 'keyforge-client';
+import { createKeyforgeClient } from 'keyforge-anvil-client';
 
 import { createJsonFileAdapter } from '../../src/storage/json-file.js';
 import { statePath } from '../lib/paths.js';
@@ -34,7 +34,7 @@ run(async () => {
   const fixtures = await loadFixtures();
   const publicKeys = await loadPublicKeys(fixtures);
 
-  // Plain fs, deliberately not the StorageAdapter or any keyforge-client
+  // Plain fs, deliberately not the StorageAdapter or any keyforge-anvil-client
   // API — this simulates an external party tampering with the file directly.
   const stateBefore = JSON.parse(await readFile(statePath, 'utf8'));
   check(

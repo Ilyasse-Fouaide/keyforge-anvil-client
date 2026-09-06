@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // examples/setup-fixtures.js — bootstraps everything the scenarios need
-// against a real running Keyforge server: a Product/Plan/Customer/
-// Subscription/License chain (name-prefixed "KFC Example" so it's
+// against a real running keyforge-anvil server: a Feature/Customer/
+// Subscription/License chain (name-prefixed "KAC Example" so it's
 // identifiable and safe to sweep from a real dev database), plus confirms
 // the signing public key is readable. Re-runnable from scratch: sweeps any
-// stale "KFC Example"-prefixed fixtures left by an interrupted prior run
+// stale "KAC Example"-prefixed fixtures left by an interrupted prior run
 // before creating fresh ones — see examples/README.md.
 
 import { createPublicKey } from 'node:crypto';
@@ -13,27 +13,26 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import {
   createAdminSession,
   createCustomer,
+  createFeature,
   createLicense,
-  createPlan,
-  createProduct,
   createSubscription,
   sweepFixtures,
 } from './lib/adminApiClient.js';
 import { loadConfig } from './lib/env.js';
 import { fixturesPath, stateDir, statePath } from './lib/paths.js';
 
-const PREFIX = 'KFC Example';
+const PREFIX = 'KAC Example';
 
 async function main() {
-  // Unique per run: once a License is activated, Keyforge's admin API has no
-  // way to ever delete it or its Product/Plan/Customer/Subscription chain
-  // (see the sweepFixtures() comment in lib/adminApiClient.js) — a fixed slug
-  // would collide with that permanent residue on a second run. The shared
-  // "KFC Example" prefix still lets sweepFixtures() find every run's rows.
+  // Unique per run: once a License is activated, keyforge-anvil's admin API has
+  // no way to ever delete it or its Feature/Customer/Subscription chain (see the
+  // sweepFixtures() comment in lib/adminApiClient.js) — a fixed slug would
+  // collide with that permanent residue on a second run. The shared "KAC
+  // Example" prefix still lets sweepFixtures() find every run's rows.
   const runId = Date.now();
   const config = loadConfig();
 
-  console.log(`Connecting to Keyforge admin API at ${config.baseUrl} ...`);
+  console.log(`Connecting to keyforge-anvil admin API at ${config.baseUrl} ...`);
   const session = await createAdminSession({
     baseUrl: config.baseUrl,
     email: config.adminEmail,
@@ -50,29 +49,24 @@ async function main() {
   console.log(`Public key OK (keyVersion ${config.keyVersion}).`);
 
   console.log('Creating fixtures...');
-  const product = await createProduct(session, {
-    name: `${PREFIX} Product ${runId}`,
-    slug: `kfc-example-${runId}`,
-    description: 'Created by keyforge-client/examples/setup-fixtures.js',
-  });
-  const plan = await createPlan(session, {
-    productId: product.id,
-    name: `${PREFIX} Plan ${runId}`,
-    defaultMaxActivations: 3,
+  const feature = await createFeature(session, {
+    name: `${PREFIX} Feature ${runId}`,
+    slug: `kac-example-${runId}`,
+    description: 'Created by keyforge-anvil-client/examples/setup-fixtures.js',
   });
   const customer = await createCustomer(session, {
     name: `${PREFIX} Customer ${runId}`,
-    contactEmail: 'kfc-example@example.invalid',
+    contactEmail: 'kac-example@example.invalid',
   });
   const startDate = new Date();
   const endDate = new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000);
   const subscription = await createSubscription(session, {
     customerId: customer.id,
-    productId: product.id,
-    planId: plan.id,
+    features: [feature.id],
     status: 'active',
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
+    gracePeriodDays: 14,
   });
   const license = await createLicense(session, {
     subscriptionId: subscription.id,
@@ -86,8 +80,9 @@ async function main() {
     baseUrl: config.baseUrl,
     publicKeyPath: config.publicKeyPath,
     keyVersion: config.keyVersion,
-    productId: product.id,
-    planId: plan.id,
+    featureId: feature.id,
+    featureSlug: feature.slug,
+    featureIds: [feature.id],
     customerId: customer.id,
     subscriptionId: subscription.id,
     licenseId: license.id,
@@ -97,8 +92,7 @@ async function main() {
 
   console.log('');
   console.log('Fixtures ready:');
-  console.log(`  Product:      ${product.id} (${product.slug})`);
-  console.log(`  Plan:         ${plan.id}`);
+  console.log(`  Feature:      ${feature.id} (${feature.slug})`);
   console.log(`  Customer:     ${customer.id}`);
   console.log(`  Subscription: ${subscription.id}`);
   console.log(`  License:      ${license.id}`);
